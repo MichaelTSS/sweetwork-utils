@@ -1,5 +1,5 @@
 /* eslint-disable no-param-reassign */
-'use strict';
+
 const HTTP = require('q-io/http');
 const bufferStream = require('q-io/buffer-stream');
 const _ = require('lodash');
@@ -17,25 +17,30 @@ const CircularSortedSetIterator = require('./iterators/circular-sorted-set-itera
  * @return {promise}
  */
 function authJWT(host, headers, serviceName, passphrase) {
-    return new Promise((resolve, reject) => {
-        HTTP.request({
-            url: `${host}/auth`,
-            method: 'POST',
-            headers,
-            body: bufferStream(new Buffer(JSON.stringify({ service: serviceName, passphrase }), 'utf8'))
-        }).then(
-            res => {
-                res.body.read().then(body => {
-                    const response = JSON.parse(new Buffer(body, 'utf8'));
-                    if (response.token) resolve(response.token);
-                    else reject();
-                });
-            },
-            err => {
-                reject(err);
-            }
-        );
-    });
+  return new Promise((resolve, reject) => {
+    HTTP.request({
+      url: `${host}/auth`,
+      method: 'POST',
+      headers,
+      body: bufferStream(
+        Buffer.from(
+          JSON.stringify({ service: serviceName, passphrase }),
+          'utf8',
+        ),
+      ),
+    }).then(
+      res => {
+        res.body.read().then(body => {
+          const response = JSON.parse(Buffer.from(body, 'utf8'));
+          if (response.token) resolve(response.token);
+          else reject();
+        });
+      },
+      err => {
+        reject(err);
+      },
+    );
+  });
 }
 
 /**
@@ -46,46 +51,46 @@ function authJWT(host, headers, serviceName, passphrase) {
  * @return {array} series [[1408140000000, 1], [1425855600000, 1], [1444514400000, 1], [1447542000000, 1], [1456441200000, 1], [1463781600000, 1]]
  */
 function groupTicksByInterval(data, interval = 'day') {
-    if (interval === 'week') interval = 'isoweek'; // based on http://stackoverflow.com/a/18875953/5690465
-    return _.chain(data)
-        .groupBy(ts => {
-            if (String(ts).length === 10) ts = parseInt(ts, 10) * 1000;
-            else if (String(ts).length === 11) ts = parseInt(ts, 10) * 100;
-            else if (String(ts).length === 12) ts = parseInt(ts, 10) * 10;
-            else if (String(ts).length === 13) ts = parseInt(ts, 10);
-            return moment(ts)
-                .startOf(interval)
-                .valueOf();
-        })
-        .map((g, ts) => [parseInt(ts, 10), g.length])
-        .value();
+  if (interval === 'week') interval = 'isoweek'; // based on http://stackoverflow.com/a/18875953/5690465
+  return _.chain(data)
+    .groupBy(ts => {
+      if (String(ts).length === 10) ts = parseInt(ts, 10) * 1000;
+      else if (String(ts).length === 11) ts = parseInt(ts, 10) * 100;
+      else if (String(ts).length === 12) ts = parseInt(ts, 10) * 10;
+      else if (String(ts).length === 13) ts = parseInt(ts, 10);
+      return moment(ts)
+        .startOf(interval)
+        .valueOf();
+    })
+    .map((g, ts) => [parseInt(ts, 10), g.length])
+    .value();
 }
 
 function avgTickNamesByInterval(data, interval = 'day') {
-    if (interval === 'week') interval = 'isoweek';
-    const newData = [];
-    for (let i = 0, c = data.length; i < c; i += 2) {
-        newData.push([data[i + 1], data[i]]);
-    }
-    return _.chain(newData)
-        .map((ts, i) => {
-            if (String(ts[0]).length === 10) ts[0] = parseInt(ts, 10) * 1000;
-            else if (String(ts[0]).length === 11) ts[0] = parseInt(ts, 10) * 100;
-            else if (String(ts[0]).length === 12) ts[0] = parseInt(ts, 10) * 10;
-            else if (String(ts[0]).length === 13) ts[0] = parseInt(ts, 10);
-            return [
-                moment(ts[0])
-                    .startOf(interval)
-                    .valueOf(),
-                ts[1]
-            ];
-        })
-        .groupBy(member => member[0])
-        .map((val, ts) => {
-            const v = val.map(m => parseInt(m[1], 10));
-            return [parseInt(ts, 10), Math.round(_.sum(v) / v.length)];
-        })
-        .value();
+  if (interval === 'week') interval = 'isoweek';
+  const newData = [];
+  for (let i = 0, c = data.length; i < c; i += 2) {
+    newData.push([data[i + 1], data[i]]);
+  }
+  return _.chain(newData)
+    .map(ts => {
+      if (String(ts[0]).length === 10) ts[0] = parseInt(ts, 10) * 1000;
+      else if (String(ts[0]).length === 11) ts[0] = parseInt(ts, 10) * 100;
+      else if (String(ts[0]).length === 12) ts[0] = parseInt(ts, 10) * 10;
+      else if (String(ts[0]).length === 13) ts[0] = parseInt(ts, 10);
+      return [
+        moment(ts[0])
+          .startOf(interval)
+          .valueOf(),
+        ts[1],
+      ];
+    })
+    .groupBy(member => member[0])
+    .map((val, ts) => {
+      const v = val.map(m => parseInt(m[1], 10));
+      return [parseInt(ts, 10), Math.round(_.sum(v) / v.length)];
+    })
+    .value();
 }
 
 /**
@@ -112,9 +117,9 @@ function avgTickNamesByInterval(data, interval = 'day') {
 // }
 
 module.exports = {
-    authJWT,
-    CircularSortedSetIterator,
-    groupTicksByInterval,
-    avgTickNamesByInterval
-    // groupTickNamesByInterval
+  authJWT,
+  CircularSortedSetIterator,
+  groupTicksByInterval,
+  avgTickNamesByInterval,
+  // groupTickNamesByInterval
 };
